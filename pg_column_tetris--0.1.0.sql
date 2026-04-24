@@ -61,7 +61,7 @@ RETURNS TABLE (
     optimal_position  int,
     padding_bytes     text
 )
-LANGUAGE plpgsql STABLE AS $$
+LANGUAGE plpgsql VOLATILE AS $$
 DECLARE
     v_offset       int;
     v_align        int;
@@ -256,7 +256,7 @@ RETURNS TABLE (
     optimal_position  int,
     padding_bytes     text
 )
-LANGUAGE sql STABLE AS $$
+LANGUAGE sql VOLATILE AS $$
     SELECT * FROM column_tetris.compute_layout(relation_name::regclass::oid);
 $$;
 
