@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.jpg" alt="pg_column_tetris logo" width="300">
+</p>
+
 # pg_column_tetris
 
 A PostgreSQL extension that enforces optimal column alignment to minimize row padding waste.
