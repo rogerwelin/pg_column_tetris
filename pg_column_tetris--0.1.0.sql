@@ -7,8 +7,6 @@
 -- Schema + Config
 -- ---------------------------------------------------------------------------
 
-CREATE SCHEMA IF NOT EXISTS column_tetris;
-
 CREATE TABLE column_tetris.config (
     mode text NOT NULL DEFAULT 'warn'
         CHECK (mode IN ('strict', 'warn', 'off'))
