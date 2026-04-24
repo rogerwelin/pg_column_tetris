@@ -48,7 +48,7 @@ NOTICE: pg_column_tetris: suboptimal column alignment — 19 bytes of fixed-widt
 Switch to **strict** mode to block suboptimal tables entirely:
 
 ```sql
-SELECT pg_column_tetris.set_mode('strict');
+SELECT column_tetris.set_mode('strict');
 ```
 
 Now the same CREATE TABLE will fail with an error and a hint showing the optimal column order:
@@ -83,10 +83,10 @@ Within each group, `NOT NULL` columns are preferred first (minor CPU optimizatio
 
 ```sql
 -- Detailed layout report for a single table
-SELECT * FROM pg_column_tetris.check('orders');
+SELECT * FROM column_tetris.check('orders');
 
 -- Generate migration DDL to fix a table
-SELECT pg_column_tetris.suggest_rewrite('orders');
+SELECT column_tetris.suggest_rewrite('orders');
 ```
 
 The `suggest_rewrite` function generates a complete migration script:
@@ -104,13 +104,13 @@ COMMIT;
 
 ```sql
 -- Set mode: 'strict' (block), 'warn' (notice only), 'off' (disable)
-SELECT pg_column_tetris.set_mode('strict');
+SELECT column_tetris.set_mode('strict');
 
 -- Check current mode
-SELECT pg_column_tetris.mode();
+SELECT column_tetris.mode();
 
 -- Exclude a table from validation (e.g., matching an external schema)
-SELECT pg_column_tetris.exclude('legacy_imports');
+SELECT column_tetris.exclude('legacy_imports');
 ```
 
 ## What Gets Checked

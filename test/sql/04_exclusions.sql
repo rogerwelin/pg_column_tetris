@@ -2,10 +2,10 @@
 -- Expected: excluded table is created even with suboptimal order in strict mode
 
 -- Setup
-SELECT pg_column_tetris.set_mode('strict');
+SELECT column_tetris.set_mode('strict');
 
 -- Test 1: Add exclusion then create suboptimal table
-SELECT pg_column_tetris.exclude('test_excluded');
+SELECT column_tetris.exclude('test_excluded');
 
 CREATE TABLE test_excluded (
     is_active boolean,
@@ -25,7 +25,7 @@ $$;
 
 -- Test 2: Remove exclusion, verify table would now be blocked
 DROP TABLE test_excluded;
-DELETE FROM pg_column_tetris.exclusions WHERE relname = 'test_excluded';
+DELETE FROM column_tetris.exclusions WHERE relname = 'test_excluded';
 
 DO $$
 DECLARE
@@ -52,7 +52,7 @@ END;
 $$;
 
 -- Test 3: Schema-qualified exclusion
-SELECT pg_column_tetris.exclude('public.test_schema_excluded');
+SELECT column_tetris.exclude('public.test_schema_excluded');
 
 CREATE TABLE test_schema_excluded (
     flag boolean,
@@ -71,6 +71,6 @@ $$;
 -- Cleanup
 DROP TABLE IF EXISTS test_excluded;
 DROP TABLE IF EXISTS test_schema_excluded;
-DELETE FROM pg_column_tetris.exclusions;
-SELECT pg_column_tetris.set_mode('warn');
+DELETE FROM column_tetris.exclusions;
+SELECT column_tetris.set_mode('warn');
 DO $$ BEGIN RAISE NOTICE 'All 04_exclusions tests passed'; END; $$;

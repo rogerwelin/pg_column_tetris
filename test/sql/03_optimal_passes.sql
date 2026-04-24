@@ -2,7 +2,7 @@
 -- Expected: CREATE TABLE succeeds without error
 
 -- Setup
-SELECT pg_column_tetris.set_mode('strict');
+SELECT column_tetris.set_mode('strict');
 
 -- Test 1: Optimal order (8-byte → 4-byte → 2-byte → 1-byte → varlena)
 CREATE TABLE test_optimal_mixed (
@@ -74,5 +74,5 @@ DROP TABLE IF EXISTS test_optimal_mixed;
 DROP TABLE IF EXISTS test_optimal_all8;
 DROP TABLE IF EXISTS test_optimal_all4;
 DROP TABLE IF EXISTS test_optimal_notnull;
-SELECT pg_column_tetris.set_mode('warn');
+SELECT column_tetris.set_mode('warn');
 DO $$ BEGIN RAISE NOTICE 'All 03_optimal_passes tests passed'; END; $$;

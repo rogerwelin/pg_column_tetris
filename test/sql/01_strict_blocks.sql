@@ -2,7 +2,7 @@
 -- Expected: CREATE TABLE is rolled back, table does not exist
 
 -- Setup
-SELECT pg_column_tetris.set_mode('strict');
+SELECT column_tetris.set_mode('strict');
 
 -- Test 1: Suboptimal order should be blocked
 DO $$
@@ -69,5 +69,5 @@ END;
 $$;
 
 -- Cleanup
-SELECT pg_column_tetris.set_mode('warn');
+SELECT column_tetris.set_mode('warn');
 DO $$ BEGIN RAISE NOTICE 'All 01_strict_blocks tests passed'; END; $$;

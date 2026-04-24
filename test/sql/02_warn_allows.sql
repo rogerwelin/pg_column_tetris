@@ -2,7 +2,7 @@
 -- Expected: table IS created despite suboptimal order
 
 -- Setup
-SELECT pg_column_tetris.set_mode('warn');
+SELECT column_tetris.set_mode('warn');
 
 -- Test 1: Suboptimal order should produce NOTICE but succeed
 CREATE TABLE test_warn_allow (
@@ -31,7 +31,7 @@ DECLARE
     v_has_padding bool := false;
 BEGIN
     SELECT EXISTS (
-        SELECT 1 FROM pg_column_tetris.check('test_warn_allow')
+        SELECT 1 FROM column_tetris.check('test_warn_allow')
         WHERE padding_bytes <> '0' AND padding_bytes <> 'variable'
     ) INTO v_has_padding;
 

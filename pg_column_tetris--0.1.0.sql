@@ -7,16 +7,16 @@
 -- Schema + Config
 -- ---------------------------------------------------------------------------
 
-CREATE SCHEMA IF NOT EXISTS pg_column_tetris;
+CREATE SCHEMA IF NOT EXISTS column_tetris;
 
-CREATE TABLE pg_column_tetris.config (
+CREATE TABLE column_tetris.config (
     mode text NOT NULL DEFAULT 'warn'
         CHECK (mode IN ('strict', 'warn', 'off'))
 );
 
-INSERT INTO pg_column_tetris.config (mode) VALUES ('warn');
+INSERT INTO column_tetris.config (mode) VALUES ('warn');
 
-CREATE TABLE pg_column_tetris.exclusions (
+CREATE TABLE column_tetris.exclusions (
     relname text PRIMARY KEY
 );
 
@@ -24,27 +24,27 @@ CREATE TABLE pg_column_tetris.exclusions (
 -- Helper functions: mode control + exclusions
 -- ---------------------------------------------------------------------------
 
-CREATE FUNCTION pg_column_tetris.set_mode(new_mode text)
+CREATE FUNCTION column_tetris.set_mode(new_mode text)
 RETURNS void
 LANGUAGE plpgsql AS $$
 BEGIN
     IF new_mode NOT IN ('strict', 'warn', 'off') THEN
         RAISE EXCEPTION 'invalid mode: %. Must be strict, warn, or off', new_mode;
     END IF;
-    UPDATE pg_column_tetris.config SET mode = new_mode;
+    UPDATE column_tetris.config SET mode = new_mode;
 END;
 $$;
 
-CREATE FUNCTION pg_column_tetris.mode()
+CREATE FUNCTION column_tetris.mode()
 RETURNS text
 LANGUAGE sql STABLE AS $$
-    SELECT mode FROM pg_column_tetris.config LIMIT 1;
+    SELECT mode FROM column_tetris.config LIMIT 1;
 $$;
 
-CREATE FUNCTION pg_column_tetris.exclude(table_name text)
+CREATE FUNCTION column_tetris.exclude(table_name text)
 RETURNS void
 LANGUAGE sql AS $$
-    INSERT INTO pg_column_tetris.exclusions (relname)
+    INSERT INTO column_tetris.exclusions (relname)
     VALUES (table_name)
     ON CONFLICT (relname) DO NOTHING;
 $$;
@@ -53,7 +53,7 @@ $$;
 -- compute_layout(oid) — Core alignment analysis
 -- ---------------------------------------------------------------------------
 
-CREATE FUNCTION pg_column_tetris.compute_layout(rel_oid oid)
+CREATE FUNCTION column_tetris.compute_layout(rel_oid oid)
 RETURNS TABLE (
     attname       name,
     typname       name,
@@ -248,7 +248,7 @@ $$;
 -- check(text) — User-friendly wrapper
 -- ---------------------------------------------------------------------------
 
-CREATE FUNCTION pg_column_tetris.check(relation_name text)
+CREATE FUNCTION column_tetris.check(relation_name text)
 RETURNS TABLE (
     attname       name,
     typname       name,
@@ -259,14 +259,14 @@ RETURNS TABLE (
     padding_bytes     text
 )
 LANGUAGE sql STABLE AS $$
-    SELECT * FROM pg_column_tetris.compute_layout(relation_name::regclass::oid);
+    SELECT * FROM column_tetris.compute_layout(relation_name::regclass::oid);
 $$;
 
 -- ---------------------------------------------------------------------------
 -- validate(oid) — Raises exception if layout is suboptimal
 -- ---------------------------------------------------------------------------
 
-CREATE FUNCTION pg_column_tetris.validate(rel_oid oid)
+CREATE FUNCTION column_tetris.validate(rel_oid oid)
 RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -403,7 +403,7 @@ $$;
 -- suggest_rewrite(text) — Generate migration DDL
 -- ---------------------------------------------------------------------------
 
-CREATE FUNCTION pg_column_tetris.suggest_rewrite(relation_name text)
+CREATE FUNCTION column_tetris.suggest_rewrite(relation_name text)
 RETURNS text
 LANGUAGE plpgsql STABLE AS $$
 DECLARE
@@ -471,14 +471,14 @@ $$;
 -- ddl_check() — Event trigger function
 -- ---------------------------------------------------------------------------
 
-CREATE FUNCTION pg_column_tetris.ddl_check()
+CREATE FUNCTION column_tetris.ddl_check()
 RETURNS event_trigger
 LANGUAGE plpgsql AS $$
 DECLARE
     r            record;
     current_mode text;
 BEGIN
-    SELECT mode INTO current_mode FROM pg_column_tetris.config LIMIT 1;
+    SELECT mode INTO current_mode FROM column_tetris.config LIMIT 1;
 
     IF current_mode = 'off' THEN
         RETURN;
@@ -496,13 +496,13 @@ BEGIN
         END IF;
 
         -- Skip system schemas
-        IF r.schema_name IN ('pg_catalog', 'information_schema', 'pg_column_tetris') THEN
+        IF r.schema_name IN ('pg_catalog', 'information_schema', 'column_tetris') THEN
             CONTINUE;
         END IF;
 
         -- Skip excluded tables
         IF EXISTS (
-            SELECT 1 FROM pg_column_tetris.exclusions
+            SELECT 1 FROM column_tetris.exclusions
              WHERE relname = r.object_identity
                 OR relname = split_part(r.object_identity, '.', 2)
                 OR relname = split_part(r.object_identity, '.', 1)
@@ -512,13 +512,13 @@ BEGIN
 
         IF current_mode = 'strict' THEN
             -- Exception propagates → rolls back the CREATE TABLE
-            PERFORM pg_column_tetris.validate(r.objid);
+            PERFORM column_tetris.validate(r.objid);
         ELSIF current_mode = 'warn' THEN
             BEGIN
-                PERFORM pg_column_tetris.validate(r.objid);
+                PERFORM column_tetris.validate(r.objid);
             EXCEPTION WHEN raise_exception THEN
                 RAISE NOTICE 'pg_column_tetris: %', SQLERRM;
-                RAISE NOTICE 'HINT: Run SELECT * FROM pg_column_tetris.check(''%'') for details', r.object_identity;
+                RAISE NOTICE 'HINT: Run SELECT * FROM column_tetris.check(''%'') for details', r.object_identity;
             END;
         END IF;
     END LOOP;
@@ -531,4 +531,4 @@ $$;
 
 CREATE EVENT TRIGGER pg_column_tetris_ddl_check
     ON ddl_command_end
-    EXECUTE FUNCTION pg_column_tetris.ddl_check();
+    EXECUTE FUNCTION column_tetris.ddl_check();

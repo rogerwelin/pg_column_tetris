@@ -1,4 +1,4 @@
 comment = 'Enforce optimal column alignment to minimize row padding'
 default_version = '0.1.0'
 relocatable = false
-schema = pg_column_tetris
+schema = column_tetris

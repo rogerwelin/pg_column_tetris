@@ -2,7 +2,7 @@
 -- Expected: all tables created successfully in strict mode
 
 -- Setup
-SELECT pg_column_tetris.set_mode('strict');
+SELECT column_tetris.set_mode('strict');
 
 -- Test 1: Varlena-only table (no fixed-width padding possible)
 CREATE TABLE test_edge_varlena_only (
@@ -84,7 +84,7 @@ END;
 $$;
 
 -- Test 6: off mode — everything passes
-SELECT pg_column_tetris.set_mode('off');
+SELECT column_tetris.set_mode('off');
 
 CREATE TABLE test_edge_off_mode (
     flag boolean,
@@ -103,13 +103,13 @@ END;
 $$;
 
 -- Test 7: suggest_rewrite produces valid output
-SELECT pg_column_tetris.set_mode('warn');
+SELECT column_tetris.set_mode('warn');
 
 DO $$
 DECLARE
     v_ddl text;
 BEGIN
-    SELECT pg_column_tetris.suggest_rewrite('test_edge_off_mode') INTO v_ddl;
+    SELECT column_tetris.suggest_rewrite('test_edge_off_mode') INTO v_ddl;
     IF v_ddl IS NULL OR v_ddl = '' THEN
         RAISE EXCEPTION 'TEST FAILED: suggest_rewrite returned empty';
     END IF;
@@ -131,5 +131,5 @@ DROP TABLE IF EXISTS test_edge_all_nullable;
 DROP TABLE IF EXISTS test_edge_many_cols;
 DROP TABLE IF EXISTS test_edge_partitioned;
 DROP TABLE IF EXISTS test_edge_off_mode;
-SELECT pg_column_tetris.set_mode('warn');
+SELECT column_tetris.set_mode('warn');
 DO $$ BEGIN RAISE NOTICE 'All 05_edge_cases tests passed'; END; $$;
