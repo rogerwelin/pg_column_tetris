@@ -8,37 +8,24 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        pg_version: [14, 15, 16, 17, 18]
-
+        pg: [14, 15, 16, 17, 18]
+    name: PostgreSQL ${{ matrix.pg }}
+    runs-on: ubuntu-latest
+    container: pgxn/pgxn-tools
     steps:
+      - run: pg-start ${{ matrix.pg }}
       - uses: actions/checkout@v4
-
-      - name: Install PostgreSQL ${{ matrix.pg_version }}
-        run: |
-          sudo apt-get -y install curl ca-certificates
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update
-          sudo apt-get -y install postgresql-${{ matrix.pg_version }} postgresql-server-dev-${{ matrix.pg_version }}
-
-      - name: Start PostgreSQL
-        run: |
-          sudo pg_ctlcluster ${{ matrix.pg_version }} main start
-          sudo -u postgres createdb pg_column_tetris_test
-
       - name: Install extension
         run: |
-          sudo make install PG_CONFIG=/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config
-          sudo -u postgres psql -d pg_column_tetris_test -v ON_ERROR_STOP=1 -c "CREATE EXTENSION pg_column_tetris"
-
+          make install
+          psql -U postgres -d postgres -c "CREATE DATABASE pg_column_tetris_test"
+          psql -U postgres -d pg_column_tetris_test -v ON_ERROR_STOP=1 -c "CREATE EXTENSION pg_column_tetris"
       - name: Run tests
         run: |
           for f in test/sql/*.sql; do
             echo "=== Running $f ==="
-            sudo -u postgres psql -d pg_column_tetris_test -v ON_ERROR_STOP=1 -f "$f"
+            psql -U postgres -d pg_column_tetris_test -v ON_ERROR_STOP=1 -f "$f"
             echo "=== $f passed ==="
           done
