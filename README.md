@@ -7,21 +7,43 @@ A PostgreSQL extension that enforces optimal column alignment to minimize row pa
 
 ## Why Column Order Matters
 
-Every heap tuple in PostgreSQL starts with a 23-byte header, followed by a null bitmap, then the actual column data. Each column must start at an address that is a multiple of its type's alignment requirement — `bigint` needs an 8-byte boundary, `integer` needs 4, `smallint` needs 2, and `boolean` just 1. When a column's natural offset doesn't land on its required boundary, PostgreSQL inserts invisible **padding bytes** to close the gap.
+PostgreSQL stores each row as a sequence of bytes on disk. Column types have different sizes — a `bigint` takes 8 bytes, an `integer` takes 4, a `boolean` takes just 1. So far so simple.
 
-Consider this table:
+The problem is that PostgreSQL can't just pack them back to back. The CPU reads memory most efficiently when values are naturally aligned — an 8-byte value should start at a position divisible by 8, a 4-byte value at a position divisible by 4, and so on. To guarantee this, PostgreSQL inserts invisible **padding bytes** between columns whenever needed.
+
+Here's an example. Say you create a table like this:
+
+```sql
+CREATE TABLE bad_order (
+    active    boolean,   -- 1 byte
+    user_id   bigint,    -- 8 bytes
+    age       integer    -- 4 bytes
+);
+```
+
+In memory, each row looks like this:
 
 ```
- boolean (1 byte)  |  7 bytes padding  |  bigint (8 bytes)  |  integer (4 bytes)  |  4 bytes padding
+[active: 1 byte] [7 bytes padding] [user_id: 8 bytes] [age: 4 bytes] = 20 bytes per row
 ```
 
-That's 11 bytes of wasted padding in a single row. Reorder the columns largest-first and the padding drops to zero:
+`user_id` needs to start at an 8-byte boundary, so PostgreSQL pads 7 bytes after `active` to get there. That's 7 wasted bytes **per row**.
+
+Now reorder the columns largest-first:
+
+```sql
+CREATE TABLE good_order (
+    user_id   bigint,    -- 8 bytes
+    age       integer,   -- 4 bytes
+    active    boolean    -- 1 byte
+);
+```
 
 ```
- bigint (8 bytes)  |  integer (4 bytes)  |  boolean (1 byte)  |  no padding
+[user_id: 8 bytes] [age: 4 bytes] [active: 1 byte] = 13 bytes per row
 ```
 
-This padding isn't just on disk — it's loaded as-is into `shared_buffers` and the OS page cache. More bytes per row means fewer rows per 8 KB page, more cache pressure, and more disk I/O. For a table with millions of rows, fixing column order can reclaim gigabytes of memory.
+Zero padding. Same data, 35% smaller rows. Multiply that across millions of rows and dozens of columns — it adds up fast. Optimal column order is free performance: zero runtime cost, just a smarter `CREATE TABLE`.
 
 ## Installation
 
@@ -37,9 +59,16 @@ make install
 CREATE EXTENSION pg_column_tetris;
 ```
 
-### Managed services
+### Managed services (RDS, Cloud SQL, Supabase, Neon, etc.)
 
-Most managed PostgreSQL providers (RDS, Cloud SQL, etc.) don't allow installing custom extensions or creating event triggers. This extension requires a self-hosted instance or a provider that supports custom extensions (e.g. [Supabase](https://supabase.com), [Neon](https://neon.tech) custom builds).
+Since the extension is pure SQL/PL/pgSQL (no C, no compilation), it runs anywhere PostgreSQL does — just load the SQL directly:
+
+```bash
+psql -d your_database -c "CREATE SCHEMA IF NOT EXISTS column_tetris"
+sed '/^\\echo.*\\quit/d' pg_column_tetris--0.1.0.sql | psql -d your_database
+```
+
+Requires a role with event trigger privileges (e.g. `rds_superuser` on RDS, `cloudsqlsuperuser` on Cloud SQL).
 
 ## Quick Start
 
