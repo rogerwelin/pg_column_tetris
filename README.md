@@ -4,6 +4,9 @@ A PostgreSQL extension that enforces optimal column alignment to minimize row pa
 
 <img src="logo.jpg" alt="pg_column_tetris logo" width="230">
 
+- Warns on suboptimal `CREATE TABLE` statements during development
+- Enforces strict alignment in CI/CD pipelines
+- Audits existing tables and generates optimized migration scripts
 
 ## Why Column Order Matters
 
@@ -141,7 +144,7 @@ Use `check()` to inspect any table's current layout and see where padding is was
 SELECT * FROM column_tetris.check('orders');
 ```
 
-Use `suggest_rewrite()` to generate a complete migration script that reorders the columns optimally:
+Use `suggest_rewrite()` to generate a migration script that reorders the columns optimally. **Caution** - it renames the original table, creates a new one, and copies all data. This means exclusive locks, downtime for that table, and lost foreign keys/indexes/triggers/defaults that aren't part of the generated DDL. Always review the output and test on a copy first:
 
 ```sql
 SELECT column_tetris.suggest_rewrite('orders');
