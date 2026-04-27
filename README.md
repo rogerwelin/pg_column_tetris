@@ -84,9 +84,13 @@ Since there's no C code, the extension runs anywhere PostgreSQL does:
 psql -d your_database -f pg_column_tetris--0.1.0.sql
 ```
 
-## Quick Start
+## Usage
 
-The extension installs in **warn** mode by default. Create a table with suboptimal column order:
+The extension has three modes (`warn`, `strict`, `off`) that cover different workflows.
+
+### Warn mode (default) — catch bad ordering during development
+
+The extension installs in `warn` mode. Any `CREATE TABLE` with suboptimal column order emits a NOTICE but still succeeds:
 
 ```sql
 CREATE TABLE orders (
@@ -100,47 +104,51 @@ CREATE TABLE orders (
 );
 ```
 
-You'll see a NOTICE suggesting the optimal order:
-
 ```
 NOTICE: pg_column_tetris: suboptimal column alignment — 19 bytes of fixed-width padding wasted per row
 ```
 
-Switch to **strict** mode to block suboptimal tables entirely:
+Good for development — you see the problem without breaking anything.
+
+### Strict mode — enforce alignment in CI/migrations
+
+In strict mode, `CREATE TABLE` with suboptimal column order is **blocked** and rolled back. The error message includes the optimal column order so you can fix it immediately:
 
 ```sql
 SELECT column_tetris.set_mode('strict');
+
+CREATE TABLE orders ( ... );
+-- ERROR:  suboptimal column alignment — 19 bytes of fixed-width padding wasted per row
+-- HINT:  Suggested order:
+--     CREATE TABLE orders (
+--         user_id bigint,          -- 8-byte aligned
+--         order_dt timestamptz,    -- 8-byte aligned
+--         ship_dt timestamptz,     -- 8-byte aligned
+--         item_ct smallint,        -- 2-byte aligned
+--         status smallint,         -- 2-byte aligned
+--         is_shipped boolean,      -- 1-byte aligned
+--         order_total numeric      -- varlena (last)
+--     );
 ```
 
-Now the same CREATE TABLE will fail with an error and a hint showing the optimal column order:
+Use this in staging/production databases or CI pipelines to guarantee every new table has optimal alignment.
 
-```
-ERROR:  suboptimal column alignment — 19 bytes of fixed-width padding wasted per row
-HINT:  Suggested order:
-    CREATE TABLE orders (
-        user_id bigint,          -- 8-byte aligned
-        order_dt timestamptz,    -- 8-byte aligned
-        ship_dt timestamptz,     -- 8-byte aligned
-        item_ct smallint,        -- 2-byte aligned
-        status smallint,         -- 2-byte aligned
-        is_shipped boolean,      -- 1-byte aligned
-        order_total numeric      -- varlena (last)
-    );
-```
+### As an analysis tool — audit existing tables
 
-## Auditing Existing Tables
+Use `check()` to inspect any table's current layout and see where padding is wasted:
 
 ```sql
--- Detailed layout report for a single table
 SELECT * FROM column_tetris.check('orders');
+```
 
--- Generate migration DDL to fix a table
+Use `suggest_rewrite()` to generate a complete migration script that reorders the columns optimally:
+
+```sql
 SELECT column_tetris.suggest_rewrite('orders');
 ```
 
-The `suggest_rewrite` function generates a complete migration script:
-
 ```sql
+-- Generated output:
 BEGIN;
 ALTER TABLE public.orders RENAME TO orders_old;
 CREATE TABLE public.orders ( ...optimal order... );
@@ -149,12 +157,11 @@ DROP TABLE public.orders_old;
 COMMIT;
 ```
 
-## Configuration
+You can use `off` mode if you want to disable the event trigger entirely and just use the analysis functions.
+
+### Other configuration
 
 ```sql
--- Set mode: 'strict' (block), 'warn' (notice only), 'off' (disable)
-SELECT column_tetris.set_mode('strict');
-
 -- Check current mode
 SELECT column_tetris.mode();
 
@@ -162,7 +169,7 @@ SELECT column_tetris.mode();
 SELECT column_tetris.exclude('legacy_imports');
 ```
 
-## What Gets Checked
+### What gets checked
 
 - **CREATE TABLE** statements are validated by the event trigger
 - **ALTER TABLE** is deliberately skipped — you can't reorder existing columns, so warning would be noise
