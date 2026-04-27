@@ -1,11 +1,11 @@
 -- pg_column_tetris: Enforce optimal column alignment to minimize row padding
 -- Copyright (c) 2026, MIT License
 
-\echo Use "CREATE EXTENSION pg_column_tetris" to load this file. \quit
-
 -- ---------------------------------------------------------------------------
 -- Schema + Config
 -- ---------------------------------------------------------------------------
+
+CREATE SCHEMA IF NOT EXISTS column_tetris;
 
 CREATE TABLE column_tetris.config (
     mode text NOT NULL DEFAULT 'warn'

@@ -21,10 +21,10 @@ CREATE TABLE bad_order (
 );
 ```
 
-In memory, each row looks like this:
+In memory, each row looks like:
 
 ```
-[active: 1 byte] [7 bytes padding] [user_id: 8 bytes] [age: 4 bytes] = 20 bytes per row
+[active: 1B] [7B padding] [user_id: 8B] [age: 4B]  →  20 bytes of column data
 ```
 
 `user_id` needs to start at an 8-byte boundary, so PostgreSQL pads 7 bytes after `active` to get there. That's 7 wasted bytes **per row**.
@@ -40,14 +40,31 @@ CREATE TABLE good_order (
 ```
 
 ```
-[user_id: 8 bytes] [age: 4 bytes] [active: 1 byte] = 13 bytes per row
+[user_id: 8B] [age: 4B] [active: 1B]  →  13 bytes of column data
 ```
 
 Zero padding. Same data, 35% smaller rows. Multiply that across millions of rows and dozens of columns — it adds up fast. Optimal column order is free performance: zero runtime cost, just a smarter `CREATE TABLE`.
 
+### Alignment Groups
+
+The extension sorts columns into these groups, largest alignment first:
+
+1. **8-byte aligned** (`d`): `bigint`, `timestamptz`, `float8`, `interval`
+2. **4-byte aligned** (`i`): `integer`, `float4`, `date`, `oid`
+3. **2-byte aligned** (`s`): `smallint`
+4. **1-byte aligned** (`c`): `boolean`, `char(1)`
+5. **Variable-length** (varlena): `text`, `varchar`, `numeric`, `jsonb`, `bytea` — always last
+
+Within each group, `NOT NULL` columns come first (minor CPU optimization for tuple deforming).
+
+## Requirements
+
+- PostgreSQL 14+
+- Superuser or event trigger privileges (`rds_superuser` on RDS, `cloudsqlsuperuser` on Cloud SQL)
+
 ## Installation
 
-Pure SQL/PL/pgSQL — no compilation needed.
+Pure SQL/PL/pgSQL — no C, no compilation.
 
 ### Self-hosted PostgreSQL
 
@@ -61,14 +78,11 @@ CREATE EXTENSION pg_column_tetris;
 
 ### Managed services (RDS, Cloud SQL, Supabase, Neon, etc.)
 
-Since the extension is pure SQL/PL/pgSQL (no C, no compilation), it runs anywhere PostgreSQL does — just load the SQL directly:
+Since there's no C code, the extension runs anywhere PostgreSQL does:
 
 ```bash
-psql -d your_database -c "CREATE SCHEMA IF NOT EXISTS column_tetris"
-sed '/^\\echo.*\\quit/d' pg_column_tetris--0.1.0.sql | psql -d your_database
+psql -d your_database -f pg_column_tetris--0.1.0.sql
 ```
-
-Requires a role with event trigger privileges (e.g. `rds_superuser` on RDS, `cloudsqlsuperuser` on Cloud SQL).
 
 ## Quick Start
 
@@ -114,18 +128,6 @@ HINT:  Suggested order:
     );
 ```
 
-## Optimal Column Order
-
-The extension enforces this ordering rule for fixed-width columns:
-
-1. **8-byte aligned** (`d`): `bigint`, `timestamptz`, `float8`, `interval`
-2. **4-byte aligned** (`i`): `integer`, `float4`, `date`, `oid`
-3. **2-byte aligned** (`s`): `smallint`
-4. **1-byte aligned** (`c`): `boolean`, `char(1)`
-5. **Variable-length** (varlena): `text`, `varchar`, `numeric`, `jsonb`, `bytea` — always last
-
-Within each group, `NOT NULL` columns are preferred first (minor CPU optimization for tuple deforming).
-
 ## Auditing Existing Tables
 
 ```sql
@@ -166,11 +168,6 @@ SELECT column_tetris.exclude('legacy_imports');
 - **ALTER TABLE** is deliberately skipped — you can't reorder existing columns, so warning would be noise
 - **Temp tables** and **system schemas** (`pg_catalog`, `information_schema`) are skipped
 - Tables in the `exclusions` list are skipped
-
-## Requirements
-
-- PostgreSQL 9.5+ (requires `pg_event_trigger_ddl_commands()`)
-- Superuser privileges to create the event trigger
 
 ## License
 
