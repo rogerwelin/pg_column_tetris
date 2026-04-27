@@ -7,9 +7,9 @@ A PostgreSQL extension that enforces optimal column alignment to minimize row pa
 
 ## Why Column Order Matters
 
-PostgreSQL stores each row as a sequence of bytes on disk. Column types have different sizes — a `bigint` takes 8 bytes, an `integer` takes 4, a `boolean` takes just 1. So far so simple.
+PostgreSQL stores each row as a sequence of bytes on disk. Column types have different sizes: a `bigint` takes 8 bytes, an `integer` takes 4, a `boolean` takes just 1. So far so simple.
 
-The problem is that PostgreSQL can't just pack them back to back. The CPU reads memory most efficiently when values are naturally aligned — an 8-byte value should start at a position divisible by 8, a 4-byte value at a position divisible by 4, and so on. To guarantee this, PostgreSQL inserts invisible **padding bytes** between columns whenever needed.
+The problem is that PostgreSQL can't just pack them back to back. The CPU reads memory most efficiently when values are naturally aligned; an 8-byte value should start at a position divisible by 8, a 4-byte value at a position divisible by 4, and so on. To guarantee this, PostgreSQL inserts invisible **padding bytes** between columns whenever needed.
 
 Here's an example. Say you create a table like this:
 
@@ -43,7 +43,7 @@ CREATE TABLE good_order (
 [user_id: 8B] [age: 4B] [active: 1B]  →  13 bytes of column data
 ```
 
-Zero padding. Same data, 35% smaller rows. Multiply that across millions of rows and dozens of columns — it adds up fast. Optimal column order is free performance: zero runtime cost, just a smarter `CREATE TABLE`.
+Zero padding. Same data, 35% smaller rows. Multiply that across millions of rows and dozens of columns and it will adds up fast. Optimal column order is free performance: zero runtime cost, just a smarter `CREATE TABLE`.
 
 ### Alignment Groups
 
@@ -53,7 +53,7 @@ The extension sorts columns into these groups, largest alignment first:
 2. **4-byte aligned** (`i`): `integer`, `float4`, `date`, `oid`
 3. **2-byte aligned** (`s`): `smallint`
 4. **1-byte aligned** (`c`): `boolean`, `char(1)`
-5. **Variable-length** (varlena): `text`, `varchar`, `numeric`, `jsonb`, `bytea` — always last
+5. **Variable-length** (varlena): `text`, `varchar`, `numeric`, `jsonb`, `bytea` - always last
 
 Within each group, `NOT NULL` columns come first (minor CPU optimization for tuple deforming).
 
@@ -64,7 +64,7 @@ Within each group, `NOT NULL` columns come first (minor CPU optimization for tup
 
 ## Installation
 
-Pure SQL/PL/pgSQL — no C, no compilation.
+Pure SQL/PL/pgSQL - no C, no compilation.
 
 ### Self-hosted PostgreSQL
 
@@ -88,7 +88,7 @@ psql -d your_database -f pg_column_tetris--0.1.0.sql
 
 The extension has three modes (`warn`, `strict`, `off`) that cover different workflows.
 
-### Warn mode (default) — catch bad ordering during development
+### Warn mode (default) - catch bad ordering during development
 
 The extension installs in `warn` mode. Any `CREATE TABLE` with suboptimal column order emits a NOTICE but still succeeds:
 
@@ -133,7 +133,7 @@ CREATE TABLE orders ( ... );
 
 Use this in staging/production databases or CI pipelines to guarantee every new table has optimal alignment.
 
-### As an analysis tool — audit existing tables
+### As an analysis tool - audit existing tables
 
 Use `check()` to inspect any table's current layout and see where padding is wasted:
 
@@ -172,7 +172,7 @@ SELECT column_tetris.exclude('legacy_imports');
 ### What gets checked
 
 - **CREATE TABLE** statements are validated by the event trigger
-- **ALTER TABLE** is deliberately skipped — you can't reorder existing columns, so warning would be noise
+- **ALTER TABLE** is deliberately skipped - you can't reorder existing columns, so warning would be noise
 - **Temp tables** and **system schemas** (`pg_catalog`, `information_schema`) are skipped
 - Tables in the `exclusions` list are skipped
 
