@@ -61,7 +61,8 @@ RETURNS TABLE (
     optimal_position  int,
     padding_bytes     text
 )
-LANGUAGE plpgsql VOLATILE AS $$
+LANGUAGE plpgsql VOLATILE
+SET search_path TO pg_catalog, pg_temp AS $$
 DECLARE
     v_offset       int;
     v_align        int;
@@ -266,7 +267,8 @@ $$;
 
 CREATE FUNCTION column_tetris.validate(rel_oid oid)
 RETURNS void
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql
+SET search_path TO pg_catalog, pg_temp AS $$
 DECLARE
     v_current_waste  int := 0;
     v_optimal_waste  int := 0;
@@ -471,7 +473,8 @@ $$;
 
 CREATE FUNCTION column_tetris.ddl_check()
 RETURNS event_trigger
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql
+SET search_path TO pg_catalog, pg_temp AS $$
 DECLARE
     r            record;
     current_mode text;
