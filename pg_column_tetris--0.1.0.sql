@@ -503,8 +503,8 @@ BEGIN
     v_hint := v_hint || '    );';
 
     IF v_current_waste > v_optimal_waste THEN
-        RAISE EXCEPTION 'suboptimal column alignment — % bytes of fixed-width padding wasted per row',
-            v_current_waste
+        RAISE EXCEPTION '% has suboptimal column alignment — % bytes of fixed-width padding wasted per row',
+            v_relname, v_current_waste
             USING DETAIL = format(
                 'Current fixed-width layout wastes %s bytes per row in alignment padding; optimal order wastes %s.',
                 v_current_waste, v_optimal_waste
