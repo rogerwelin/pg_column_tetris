@@ -1,5 +1,8 @@
 # pg_column_tetris
 
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14--18-blue.svg)](https://www.postgresql.org/)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/rogerwelin/pg_column_tetris/actions/workflows/test.yml)
+
 A PostgreSQL extension that enforces optimal column alignment to minimize row padding waste.
 
 <img src="logo.jpg" alt="pg_column_tetris logo" width="230">
