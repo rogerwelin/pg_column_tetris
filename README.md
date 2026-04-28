@@ -229,7 +229,7 @@ SELECT * FROM column_tetris.exclusions;
 - Tables in the `exclusions` list are skipped
 
 ## Project status
-**pg_column_tetris** is currently in running in production use at [meitner](https://meitner.se/en-gb) - a Swedish ed-tech startup 
+**pg_column_tetris** is currently running in production at [meitner](https://meitner.se/en-gb) - a Swedish ed-tech startup 
 
 
 ## License
