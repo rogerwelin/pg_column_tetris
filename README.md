@@ -13,6 +13,23 @@ A PostgreSQL extension that enforces optimal column alignment to minimize row pa
 - Enforces strict alignment in CI/CD pipelines
 - Audits existing tables and generates optimized migration scripts
 
+## Table of Contents
+
+- [Why Column Order Matters](#why-column-order-matters)
+  - [Alignment Groups](#alignment-groups)
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [Self-hosted PostgreSQL](#self-hosted-postgresql)
+  - [Managed services (RDS, Cloud SQL, Supabase, Neon, etc.)](#managed-services-rds-cloud-sql-supabase-neon-etc)
+- [Usage](#usage)
+  - [Warn mode (default)](#warn-mode-default---catch-bad-ordering-during-development)
+  - [Strict mode](#strict-mode--enforce-alignment-in-cimigrations)
+  - [As an analysis tool](#as-an-analysis-tool---audit-existing-tables)
+  - [Other configuration](#other-configuration)
+  - [What gets checked](#what-gets-checked)
+- [Project status](#project-status)
+- [License](#license)
+
 ## Why Column Order Matters
 
 PostgreSQL stores each row as a sequence of bytes on disk. Column types have different sizes: a `bigint` takes 8 bytes, an `integer` takes 4, a `boolean` takes just 1. So far so simple.
@@ -210,6 +227,10 @@ SELECT * FROM column_tetris.exclusions;
 - **ALTER TABLE** is deliberately skipped - you can't reorder existing columns, so warning would be noise
 - **Temp tables** and **system schemas** (`pg_catalog`, `information_schema`) are skipped
 - Tables in the `exclusions` list are skipped
+
+## Project status
+**pg_column_tetris** is currently in running in production use at [meitner](https://meitner.se/en-gb) - a Swedish ed-tech startup 
+
 
 ## License
 
