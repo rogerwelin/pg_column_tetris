@@ -138,7 +138,31 @@ Use this in staging/production databases or CI pipelines to guarantee every new 
 
 ### As an analysis tool - audit existing tables
 
-Use `check()` to inspect any table's current layout and see where padding is wasted:
+Use `padding_wasted()` to quickly check how many bytes a table wastes per row:
+
+```sql
+SELECT column_tetris.padding_wasted('orders');
+-- Returns: 7  (bytes of avoidable padding per row)
+```
+
+Pass `'total'` to see the total waste across all rows in the table. Wrap with `pg_size_pretty()` for human-readable output:
+
+```sql
+SELECT pg_size_pretty(column_tetris.padding_wasted('orders', 'total'));
+-- Returns: '458 MB'
+```
+
+Find all tables with padding waste:
+
+```sql
+SELECT schemaname, tablename,
+       column_tetris.padding_wasted(schemaname || '.' || tablename) AS bytes_per_row
+  FROM pg_tables
+ WHERE schemaname = 'public'
+   AND column_tetris.padding_wasted(schemaname || '.' || tablename) > 0;
+```
+
+Use `check()` for a detailed column-by-column layout report:
 
 ```sql
 SELECT * FROM column_tetris.check('orders');
