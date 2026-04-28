@@ -2,6 +2,7 @@
 
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14--18-blue.svg)](https://www.postgresql.org/)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/rogerwelin/pg_column_tetris/test.yml)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 
 A PostgreSQL extension that enforces optimal column alignment to minimize row padding waste.
