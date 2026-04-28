@@ -1,5 +1,5 @@
 -- pg_column_tetris: Enforce optimal column alignment to minimize row padding
--- Copyright (c) 2026, MIT License
+-- Copyright Roger Welin (c) 2026, MIT License
 
 -- ---------------------------------------------------------------------------
 -- Schema + Config
