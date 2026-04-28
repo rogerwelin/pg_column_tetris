@@ -262,6 +262,121 @@ LANGUAGE sql VOLATILE AS $$
 $$;
 
 -- ---------------------------------------------------------------------------
+-- padding_wasted(text) — Returns bytes of avoidable padding per row
+-- ---------------------------------------------------------------------------
+
+CREATE FUNCTION column_tetris.padding_wasted(relation_name text, report_mode text DEFAULT 'row')
+RETURNS bigint
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_rel_oid      oid;
+    v_current_waste  int := 0;
+    v_optimal_waste  int := 0;
+    v_offset       int;
+    v_align        int;
+    v_padding      int;
+    v_num_cols     int;
+    v_any_nullable bool;
+    v_row_count    bigint;
+    col            record;
+BEGIN
+    IF report_mode NOT IN ('row', 'total') THEN
+        RAISE EXCEPTION 'invalid report_mode: %. Must be row or total', report_mode;
+    END IF;
+
+    v_rel_oid := relation_name::regclass::oid;
+
+    SELECT count(*)::int, bool_or(NOT a.attnotnull)
+      INTO v_num_cols, v_any_nullable
+      FROM pg_attribute a
+     WHERE a.attrelid = v_rel_oid
+       AND a.attnum > 0
+       AND NOT a.attisdropped;
+
+    IF v_num_cols = 0 THEN
+        RETURN 0;
+    END IF;
+
+    -- Current layout waste
+    v_offset := 23;
+    IF v_any_nullable THEN
+        v_offset := v_offset + ((v_num_cols + 7) / 8);
+    END IF;
+    v_offset := ((v_offset + 7) / 8) * 8;
+
+    FOR col IN
+        SELECT t.typalign, t.typlen
+          FROM pg_attribute a
+          JOIN pg_type t ON t.oid = a.atttypid
+         WHERE a.attrelid = v_rel_oid
+           AND a.attnum > 0
+           AND NOT a.attisdropped
+         ORDER BY a.attnum
+    LOOP
+        IF col.typlen = -1 THEN
+            v_align := 4;
+            v_offset := ((v_offset + v_align - 1) / v_align) * v_align + 4;
+        ELSE
+            v_align := CASE col.typalign
+                WHEN 'd' THEN 8 WHEN 'i' THEN 4
+                WHEN 's' THEN 2 WHEN 'c' THEN 1 ELSE 4
+            END;
+            v_padding := ((v_offset + v_align - 1) / v_align) * v_align - v_offset;
+            v_current_waste := v_current_waste + v_padding;
+            v_offset := ((v_offset + v_align - 1) / v_align) * v_align + col.typlen;
+        END IF;
+    END LOOP;
+
+    -- Optimal layout waste
+    v_offset := 23;
+    IF v_any_nullable THEN
+        v_offset := v_offset + ((v_num_cols + 7) / 8);
+    END IF;
+    v_offset := ((v_offset + 7) / 8) * 8;
+
+    FOR col IN
+        SELECT t.typalign, t.typlen
+          FROM pg_attribute a
+          JOIN pg_type t ON t.oid = a.atttypid
+         WHERE a.attrelid = v_rel_oid
+           AND a.attnum > 0
+           AND NOT a.attisdropped
+         ORDER BY
+           CASE
+               WHEN t.typlen = -1 THEN 5
+               WHEN t.typalign = 'd' THEN 1
+               WHEN t.typalign = 'i' THEN 2
+               WHEN t.typalign = 's' THEN 3
+               WHEN t.typalign = 'c' THEN 4
+               ELSE 5
+           END,
+           CASE WHEN a.attnotnull THEN 0 ELSE 1 END,
+           a.attnum
+    LOOP
+        IF col.typlen = -1 THEN
+            v_align := 4;
+            v_offset := ((v_offset + v_align - 1) / v_align) * v_align + 4;
+        ELSE
+            v_align := CASE col.typalign
+                WHEN 'd' THEN 8 WHEN 'i' THEN 4
+                WHEN 's' THEN 2 WHEN 'c' THEN 1 ELSE 4
+            END;
+            v_padding := ((v_offset + v_align - 1) / v_align) * v_align - v_offset;
+            v_optimal_waste := v_optimal_waste + v_padding;
+            v_offset := ((v_offset + v_align - 1) / v_align) * v_align + col.typlen;
+        END IF;
+    END LOOP;
+
+    IF report_mode = 'total' THEN
+        EXECUTE format('SELECT count(*) FROM %s', v_rel_oid::regclass) INTO v_row_count;
+        RETURN (v_current_waste - v_optimal_waste)::bigint * v_row_count;
+    END IF;
+
+    RETURN (v_current_waste - v_optimal_waste)::bigint;
+END;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- validate(oid) — Raises exception if layout is suboptimal
 -- ---------------------------------------------------------------------------
 
