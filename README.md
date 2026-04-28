@@ -2,6 +2,7 @@
 
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14--18-blue.svg)](https://www.postgresql.org/)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/rogerwelin/pg_column_tetris/test.yml)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 
 A PostgreSQL extension that enforces optimal column alignment to minimize row padding waste.
@@ -198,6 +199,9 @@ SELECT column_tetris.mode();
 
 -- Exclude a table from validation (e.g., matching an external schema)
 SELECT column_tetris.exclude('legacy_imports');
+
+-- View excluded table-/s
+SELECT * FROM column_tetris.exclusions;
 ```
 
 ### What gets checked
