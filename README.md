@@ -27,7 +27,6 @@ A PostgreSQL extension that enforces optimal column alignment to minimize row pa
   - [As an analysis tool](#as-an-analysis-tool---audit-existing-tables)
   - [Other configuration](#other-configuration)
   - [What gets checked](#what-gets-checked)
-- [Project status](#project-status)
 - [License](#license)
 
 ## Why Column Order Matters
@@ -227,9 +226,6 @@ SELECT * FROM column_tetris.exclusions;
 - **ALTER TABLE** is deliberately skipped - you can't reorder existing columns, so warning would be noise
 - **Temp tables** and **system schemas** (`pg_catalog`, `information_schema`) are skipped
 - Tables in the `exclusions` list are skipped
-
-## Project status
-**pg_column_tetris** is currently running in production at [meitner](https://meitner.se/en-gb) - a Swedish ed-tech startup 
 
 
 ## License
